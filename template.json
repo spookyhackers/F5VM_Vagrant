@@ -1,0 +1,47 @@
+{
+    "builders": [
+    {
+      "type": "virtualbox-ovf",
+      "source_path": "BIGIP-11.6.0.0.0.401.LTM_1SLOT-ide.ova",
+      "ssh_username": "root",
+      "ssh_password": "default",
+      "ssh_wait_timeout": "30000s",
+      "headless": "false",
+      "shutdown_command": "shutdown -h now",
+      "import_flags": ["--eula", "accept"],
+      "guest_additions_mode": "disable",
+      "vm_name": "BIGIP-11.6.0.0.0.401.LTM_1SLOT-ide",
+      "vboxmanage": [
+        ["modifyvm","{{.Name}}","--memory","4096"],
+        ["modifyvm","{{.Name}}","--cpus","2"],
+        ["modifyvm","{{.Name}}","--nic1","NAT"]
+      ]
+    }
+  ],
+  "provisioners": [
+  {
+    "type": "shell",
+    "inline": [
+      "mount -o remount,rw /dev/mapper/vg--db--hda-set.1._usr /usr",
+      "curl -o /tmp/sudo-1.8.16-1.el5.x86_64.rpm http://www.usenix.org.uk/mirrors/sudo_ftp/packages/Centos/5/sudo-1.8.16-1.el5.x86_64.rpm",
+      "rpm -Uvh /tmp/sudo-1.8.16-1.el5.x86_64.rpm",
+
+      "tmsh create auth user vagrant password vagrant partition-access add { all-partitions { role admin } } shell bash",
+      "echo 'vagrant ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/vagrant",
+      "mkdir -p /home/vagrant/.ssh",
+      "chmod 0700 /home/vagrant/.ssh",
+      "curl --insecure -L -o /home/vagrant/.ssh/authorized_keys https://raw.github.com/mitchellh/vagrant/master/keys/vagrant.pub",
+      "chmod 0600 /home/vagrant/.ssh/authorized_keys",
+      "chown -R vagrant /home/vagrant/.ssh",
+      "tmsh save sys config"
+    ]
+  }
+ ],
+  "post-processors": [
+    {
+      "type": "vagrant",
+      "compression_level": 1,
+      "output": "BIGIP-11.6.0.0.0.401.LTM_1SLOT-ide.box"
+    }
+  ]
+}
